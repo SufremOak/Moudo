@@ -8,3 +8,21 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.vcxproj.filters
+*.pdb
+*.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+build/
+bin/
+obj/

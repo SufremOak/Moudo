@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Moudox (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Moudox (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
