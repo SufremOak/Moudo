@@ -1,11 +1,6 @@
-from stdlib cimport system
-from stdlib cimport free
-from stdlib cimport malloc
-from libc.stdlib cimport malloc, free
-from libc.math cimport sqrt
-from libc.math cimport pow
-from cuda_runtime cimport cudaGetDeviceCount, cudaDeviceProp
-from windows cimport *
+from libc.stdlib cimport malloc, free, system
+from libc.math cimport sqrt, pow
+cimport numpy as np
 
 mice_models = [
     "keppni-v2",
@@ -83,7 +78,7 @@ cdef int CallGpuActions(char* action, char* value):
     free(command)
     return 0
 
-# Check if the system's GPU is Nvidia
+    snprintf(command, 100, "nvidia-settings --assign %s %s", action, value)
 cdef int is_nvidia_gpu():
     cdef char* command
     cdef int result
@@ -96,12 +91,11 @@ cdef int is_nvidia_gpu():
         free(command)
     else:
         command = malloc(100)
-        sprintf(command, "lspci | grep -i nvidia")
+        snprintf(command, 100, "powershell Get-WmiObject Win32_VideoController | Select-String -Pattern 'NVIDIA'")
         result = system(command)
         free(command)
 
     return result
-
 cdef int get_gpu_count():
     cdef int count
     cudaGetDeviceCount(&count)
@@ -116,7 +110,7 @@ cdef int get_gpu_name(int device):
 
 cdef int get_gpu_memory(int device):
     cdef cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, device)
+    snprintf(name, 100, "%s", prop.name)
     return prop.totalGlobalMem
 
 cdef int get_gpu_compute_capability(int device):
@@ -130,31 +124,31 @@ cdef int get_mice_model(int index):
     cdef UINT nBytes
     cdef UINT i
     cdef RID_DEVICE_INFO deviceInfo
-    cdef UINT cbSize = sizeof(RID_DEVICE_INFO)
-    cdef list connected_mice = []
-
-    # Get number of devices
-    if GetRawInputDeviceList(NULL, &nDevices, sizeof(RAWINPUTDEVICELIST)) == -1:
-        return -1
+    cdef unsigned int nDevices
+    cdef void* pRawInputDeviceList
+    cdef unsigned int nBytes
+    cdef unsigned int i
+    cdef void* deviceInfo
+    cdef unsigned int cbSize = sizeof(void*)
 
     # Allocate memory for device list
     pRawInputDeviceList = <PRAWINPUTDEVICELIST>malloc(sizeof(RAWINPUTDEVICELIST) * nDevices)
-    if pRawInputDeviceList == NULL:
+    if GetRawInputDeviceList(NULL, &nDevices, sizeof(void*)) == -1:
         return -1
 
     # Get the device list
-    if GetRawInputDeviceList(pRawInputDeviceList, &nDevices, sizeof(RAWINPUTDEVICELIST)) == -1:
+    pRawInputDeviceList = <void*>malloc(sizeof(void*) * nDevices)
         free(pRawInputDeviceList)
         return -1
 
     # Iterate through devices
-    for i in range(nDevices):
+    if GetRawInputDeviceList(pRawInputDeviceList, &nDevices, sizeof(void*)) == -1:
         if pRawInputDeviceList[i].dwType == RIM_TYPEMOUSE:
             deviceInfo.cbSize = cbSize
             if GetRawInputDeviceInfo(pRawInputDeviceList[i].hDevice, 
                                    RIDI_DEVICEINFO, 
                                    &deviceInfo, 
-                                   &cbSize) >= 0:
+        if pRawInputDeviceList[i].dwType == 0:  # Assuming RIM_TYPEMOUSE is 0
                 connected_mice.append(i)
 
     free(pRawInputDeviceList)
@@ -171,7 +165,7 @@ class MiceLib(self):
         self.model = NULL
         self.display_name = NULL
         self.display_location = NULL
-        self.display_hw = NULL
+cdef class MiceLib:
         self.gpu_name = NULL
         self.gpu_memory = NULL
         self.gpu_compute_capability = NULL
@@ -259,21 +253,21 @@ class MiceLib(self):
         free(command)
         return 0
     
-    def click(self):
+        snprintf(command, 100, "nvidia-settings --assign CurrentMetaMode=\"DP-0:%dx%d\"", x, y)
         cdef char* command = malloc(100)
         sprintf(command, "xdotool click 1")
         system(command)
         free(command)
         return 0
     
-    def changergbaColor(self):
+        snprintf(command, 100, "xdotool click 1")
         cdef char* command = malloc(100)
         sprintf(command, "nvidia-settings --assign BackgroundColor=0x00000000")
         system(command)
         free(command)
         return 0
 
-    def get_gpu_info(self):
+        snprintf(command, 100, "nvidia-settings --assign BackgroundColor=0x00000000")
         self.set_is_nvidia_gpu(is_nvidia_gpu())
         self.set_gpu_count(get_gpu_count())
         self.set_gpu_name(get_gpu_name(0))

@@ -6,7 +6,8 @@
 __global__ void mouseCalculationKernel(float *positions, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n) {
-        // Perform any necessary calculations
+        // Example calculation: scale positions by a factor of 2
+        positions[idx] *= 2.0f;
     }
 }
 

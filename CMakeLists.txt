@@ -27,11 +27,17 @@ endif()
 # Collect all .pyx files in the src directory
 file(GLOB_RECURSE CYTHON_FILES src/*.pyx)
 
+# Collect all .cu files in the src/nvidia directory
+file(GLOB_RECURSE CUDA_FILES src/nvidia/*.cu)
+
+# Enable CUDA support
+find_package(CUDA REQUIRED)
+
 # Compile .pyx files to .c
 cython_add_module(${LIBRARY_NAME} ${CYTHON_FILES})
 
 # Create the shared library
-add_library(${LIBRARY_NAME} SHARED ${CYTHON_FILES})
+add_library(${LIBRARY_NAME} SHARED ${CYTHON_FILES} ${CUDA_FILES})
 
-# Link Python libraries
-target_link_libraries(${LIBRARY_NAME} Python3::Python)
+# Link Python and CUDA libraries
+target_link_libraries(${LIBRARY_NAME} Python3::Python CUDA::cudart)
