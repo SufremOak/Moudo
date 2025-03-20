@@ -3,6 +3,11 @@ project(Moudo)
 
 # Find Python
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+if (NOT Python3_FOUND)
+    set(Python3_EXECUTABLE "./.venv/bin/python")
+    set(Python3_INCLUDE_DIRS "./.venv/include/python3.8")
+    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+endif()
 find_package(Cython REQUIRED)
 
 # Check for Windows on ARM
@@ -34,7 +39,12 @@ file(GLOB_RECURSE CUDA_FILES src/nvidia/*.cu)
 find_package(CUDA REQUIRED)
 
 # Compile .pyx files to .c
-cython_add_module(${LIBRARY_NAME} ${CYTHON_FILES})
+add_custom_command(
+    OUTPUT ${CYTHON_FILES}
+    COMMAND ${Python3_EXECUTABLE} -m cython ${CYTHON_FILES}
+    DEPENDS ${CYTHON_FILES}
+    COMMENT "Compiling Cython files to C"
+)
 
 # Create the shared library
 add_library(${LIBRARY_NAME} SHARED ${CYTHON_FILES} ${CUDA_FILES})

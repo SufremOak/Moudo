@@ -1,287 +1,161 @@
-from libc.stdlib cimport malloc, free, system
-from libc.math cimport sqrt, pow
-import numpy as np
+# MouseLib.pyx
 
-mice_models = [
-    "keppni-v2",
-    "generic-microsoft-3btn",
-]
+from libc.stdint cimport int32_t
+import ctypes
 
-mice_display_names = [
-    "Keppni v2",
-    "Generic Microsoft 3 Button",
-]
+# Load the DLL that interacts with the mouse hardware
+mouse_dll = ctypes.CDLL("path_to_mouse_dll.dll")
 
-DisplayLocations = [
-    "Top Left",
-    "Top Right",
-    "Bottom Left",
-    "Bottom Right",
-    "Center",
-    "Custom",
-]
+# Define constants for mouse buttons
+LEFT_BUTTON = 1
+RIGHT_BUTTON = 2
+MIDDLE_BUTTON = 4
+BUTTON_4 = 8
+BUTTON_5 = 16
 
-DisplayLocationsDict = {
-    "Top Left": 0,
-    "Top Right": 1,
-    "Bottom Left": 2,
-    "Bottom Right": 3,
-    "Center": 4,
-    "Custom": 5,
-}
+cdef extern from "windows.h":
+    cdef int CreateWindowExA(unsigned long, const char*, const char*, unsigned long, int, int, int, int, void*, void*, void*, void*)
+    cdef int ShowWindow(void*, int)
+    cdef int UpdateWindow(void*)
+    cdef int DefWindowProcA(void*, unsigned int, unsigned long, long)
+    cdef int RegisterClassExA(void*)
+    cdef int GetModuleHandleA(const char*)
+    cdef int LoadCursorA(void*, const char*)
+    cdef int LoadIconA(void*, const char*)
+    cdef int PostQuitMessage(int)
+    cdef int GetMessageA(void*, void*, unsigned int, unsigned int)
+    cdef int TranslateMessage(void*)
+    cdef int DispatchMessageA(void*)
+    cdef int WNDCLASSEXA
 
-DisplayHW = [
-    "16:9",
-    "16:10",
-    "4:3",
-    "5:4",
-    "Custom",
-]
+cdef class Mouse:
+    cdef int x, y
+    cdef int button_state
 
-DisplayCoordenates = {
-    "Top Left": (0, 0),
-    "Top Right": (1, 0),
-    "Bottom Left": (0, 1),
-    "Bottom Right": (1, 1),
-    "Center": (0.5, 0.5),
-    "Custom": NULL,
-}
-
-cdef int get_mouse_model_index(char* model):
-    cdef int i
-    for i in range(len(mice_models)):
-        if model == mice_models[i]:
-            return i
-    return -1
-
-cdef int x = {DisplayCoordenates["Custom"]}
-cdef int y = {DisplayCoordenates["Custom"]}
-
-cdef int get_display_location_index(char* location):
-    cdef int i
-    for i in range(len(DisplayLocations)):
-        if location == DisplayLocations[i]:
-            return i
-    return -1
-
-cdef int get_display_hw_index(char* hw):
-    cdef int i
-    for i in range(len(DisplayHW)):
-        if hw == DisplayHW[i]:
-            return i
-    return -1
-
-cdef int CallGpuActions(char* action, char* value):
-    cdef char* command = malloc(100)
-    sprintf(command, "nvidia-settings --assign %s %s", action, value)
-    system(command)
-    free(command)
-    return 0
-
-    snprintf(command, 100, "nvidia-settings --assign %s %s", action, value)
-cdef int is_nvidia_gpu():
-    cdef char* command
-    cdef int result
-
-    # Check if the OS is Windows
-    if system("ver > nul 2>&1") == 0:
-        command = malloc(100)
-        sprintf(command, "powershell Get-WmiObject Win32_VideoController | Select-String -Pattern 'NVIDIA'")
-        result = system(command)
-        free(command)
-    else:
-        command = malloc(100)
-        snprintf(command, 100, "powershell Get-WmiObject Win32_VideoController | Select-String -Pattern 'NVIDIA'")
-        result = system(command)
-        free(command)
-
-    return result
-cdef int get_gpu_count():
-    cdef int count
-    cudaGetDeviceCount(&count)
-    return count
-
-cdef int get_gpu_name(int device):
-    cdef char name[100]
-    cdef cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, device)
-    sprintf(name, "%s", prop.name)
-    return name
-
-cdef int get_gpu_memory(int device):
-    cdef cudaDeviceProp prop;
-    snprintf(name, 100, "%s", prop.name)
-    return prop.totalGlobalMem
-
-cdef int get_gpu_compute_capability(int device):
-    cdef cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, device)
-    return prop.major, prop.minor
-
-cdef int get_mice_model(int index):
-    cdef UINT nDevices
-    cdef PRAWINPUTDEVICELIST pRawInputDeviceList
-    cdef UINT nBytes
-    cdef UINT i
-    cdef RID_DEVICE_INFO deviceInfo
-    cdef unsigned int nDevices
-    cdef void* pRawInputDeviceList
-    cdef unsigned int nBytes
-    cdef unsigned int i
-    cdef void* deviceInfo
-    cdef unsigned int cbSize = sizeof(void*)
-
-    # Allocate memory for device list
-    pRawInputDeviceList = <PRAWINPUTDEVICELIST>malloc(sizeof(RAWINPUTDEVICELIST) * nDevices)
-    if GetRawInputDeviceList(NULL, &nDevices, sizeof(void*)) == -1:
-        return -1
-
-    # Get the device list
-    pRawInputDeviceList = <void*>malloc(sizeof(void*) * nDevices)
-        free(pRawInputDeviceList)
-        return -1
-
-    # Iterate through devices
-    if GetRawInputDeviceList(pRawInputDeviceList, &nDevices, sizeof(void*)) == -1:
-        if pRawInputDeviceList[i].dwType == RIM_TYPEMOUSE:
-            deviceInfo.cbSize = cbSize
-            if GetRawInputDeviceInfo(pRawInputDeviceList[i].hDevice,
-                                   RIDI_DEVICEINFO,
-                                   &deviceInfo,
-        if pRawInputDeviceList[i].dwType == 0:  # Assuming RIM_TYPEMOUSE is 0
-                connected_mice.append(i)
-
-    free(pRawInputDeviceList)
-    return mice_models[index] if index < len(connected_mice) else -1
-
-cdef int get_mice_display_name(int index):
-    return mice_display_names[index] if index < len(mice_display_names) else -1
-
-cdef int get_mice_display_location(int index):
-    return DisplayLocations[index] if index < len(DisplayLocations) else -1
-
-class MiceLib(self):
     def __init__(self):
-        self.model = NULL
-        self.display_name = NULL
-        self.display_location = NULL
-cdef class MiceLib:
-        self.gpu_name = NULL
-        self.gpu_memory = NULL
-        self.gpu_compute_capability = NULL
-        self.is_nvidia_gpu = NULL
-        self.gpu_count = NULL
-        self.mice_model = NULL
-        self.mice_display_name = NULL
-        self.mice_display_location = NULL
+        self.x = 0
+        self.y = 0
+        self.button_state = 0
 
-    def set_model(self, char* model):
-        self.model = model
+    def move(self, int dx, int dy):
+        """
+        Move the mouse cursor by (dx, dy).
+        """
+        self.x += dx
+        self.y += dy
+        mouse_dll.move_mouse(dx, dy)
 
-    def set_display_name(self, char* display_name):
-        self.display_name = display_name
+    def click(self, int button):
+        """
+        Click a mouse button.
+        """
+        self.button_state |= button
+        mouse_dll.click_button(button)
 
-    def set_display_location(self, char* display_location):
-        self.display_location = display_location
+    def release(self, int button):
+        """
+        Release a mouse button.
+        """
+        self.button_state &= ~button
+        mouse_dll.release_button(button)
 
-    def set_display_hw(self, char* display_hw):
-        self.display_hw = display_hw
+    def scroll(self, int delta):
+        """
+        Scroll the mouse wheel.
+        """
+        mouse_dll.scroll_wheel(delta)
 
-    def set_gpu_name(self, char* gpu_name):
-        self.gpu_name = gpu_name
+    def move_to(self, int x, int y):
+        """
+        Move the mouse cursor to an absolute position (x, y).
+        """
+        self.x = x
+        self.y = y
+        mouse_dll.move_mouse_to(x, y)
 
-    def set_gpu_memory(self, int gpu_memory):
-        self.gpu_memory = gpu_memory
+    def double_click(self, int button):
+        """
+        Perform a double click with a mouse button.
+        """
+        self.click(button)
+        self.release(button)
+        self.click(button)
+        self.release(button)
 
-    def set_gpu_compute_capability(self, int gpu_compute_capability):
-        self.gpu_compute_capability = gpu_compute_capability
+    def get_position(self):
+        """
+        Get the current mouse cursor position.
+        """
+        return self.x, self.y
 
-    def set_is_nvidia_gpu(self, int is_nvidia_gpu):
-        self.is_nvidia_gpu = is_nvidia_gpu
+    def get_button_state(self):
+        """
+        Get the current state of the mouse buttons.
+        """
+        return self.button_state
 
-    def set_gpu_count(self, int gpu_count):
-        self.gpu_count = gpu_count
+    def is_button_pressed(self, int button):
+        """
+        Check if a specific mouse button is pressed.
+        """
+        return (self.button_state & button) != 0
 
-    def set_mice_model(self, char* mice_model):
-        self.mice_model = mice_model
+cdef class Window:
+    cdef void* hwnd
 
-    def set_mice_display_name(self, char* mice_display_name):
-        self.mice_display_name = mice_display_name
+    def __init__(self, const char* title, int width, int height):
+        self.hwnd = self.create_window(title, width, height)
 
-    def set_mice_display_location(self, char* mice_display_location):
-        self.mice_display_location = mice_display_location
+    cdef void* create_window(self, const char* title, int width, int height):
+        wc = WNDCLASSEXA()
+        wc.cbSize = ctypes.sizeof(WNDCLASSEXA)
+        wc.style = 0
+        wc.lpfnWndProc = DefWindowProcA
+        wc.cbClsExtra = 0
+        wc.cbWndExtra = 0
+        wc.hInstance = GetModuleHandleA(None)
+        wc.hIcon = LoadIconA(None, 32512)  # IDI_APPLICATION
+        wc.hCursor = LoadCursorA(None, 32512)  # IDC_ARROW
+        wc.hbrBackground = 5  # COLOR_WINDOW + 1
+        wc.lpszMenuName = None
+        wc.lpszClassName = b"WindowClass"
+        wc.hIconSm = LoadIconA(None, 32512)  # IDI_APPLICATION
 
-    def get_model(self):
-        return self.model
+        if not RegisterClassExA(ctypes.byref(wc)):
+            raise WindowsError("Failed to register window class")
 
-    def get_display_name(self):
-        return self.display_name
+        hwnd = CreateWindowExA(
+            0,
+            wc.lpszClassName,
+            title,
+            0xCF0000,  # WS_OVERLAPPEDWINDOW
+            0x80000000,  # CW_USEDEFAULT
+            0x80000000,  # CW_USEDEFAULT
+            width,
+            height,
+            None,
+            None,
+            wc.hInstance,
+            None
+        )
 
-    def get_display_location(self):
-        return self.display_location
+        if not hwnd:
+            raise WindowsError("Failed to create window")
 
-    def get_display_hw(self):
-        return self.display_hw
+        ShowWindow(hwnd, 1)  # SW_SHOWNORMAL
+        UpdateWindow(hwnd)
 
-    def get_gpu_name(self):
-        return self.gpu_name
+        return hwnd
 
-    def get_gpu_memory(self):
-        return self.gpu_memory
+    def show(self):
+        ShowWindow(self.hwnd, 1)  # SW_SHOWNORMAL
+        UpdateWindow(self.hwnd)
 
-    def get_gpu_compute_capability(self):
-        return self.gpu_compute_capability
+    def close(self):
+        PostQuitMessage(0)
 
-    def get_is_nvidia_gpu(self):
-        return self.is_nvidia_gpu
-
-    def get_gpu_count(self):
-        return self.gpu_count
-
-    def get_mice_model(self):
-        return self.mice_model
-
-    def get_mice_display_name(self):
-        return self.mice_display_name
-
-    def move(self):
-        cdef int x = {DisplayCoordenates[self.display_location]}
-        cdef int y = {DisplayCoordenates[self.display_location]}
-        cdef char* command = malloc(100)
-        sprintf(command, "nvidia-settings --assign CurrentMetaMode=\"DP-0:%dx%d\"", x, y)
-        system(command)
-        free(command)
-        return 0
-
-        snprintf(command, 100, "nvidia-settings --assign CurrentMetaMode=\"DP-0:%dx%d\"", x, y)
-        cdef char* command = malloc(100)
-        sprintf(command, "xdotool click 1")
-        system(command)
-        free(command)
-        return 0
-
-        snprintf(command, 100, "xdotool click 1")
-        cdef char* command = malloc(100)
-        sprintf(command, "nvidia-settings --assign BackgroundColor=0x00000000")
-        system(command)
-        free(command)
-        return 0
-
-        snprintf(command, 100, "nvidia-settings --assign BackgroundColor=0x00000000")
-        self.set_is_nvidia_gpu(is_nvidia_gpu())
-        self.set_gpu_count(get_gpu_count())
-        self.set_gpu_name(get_gpu_name(0))
-        self.set_gpu_memory(get_gpu_memory(0))
-        self.set_gpu_compute_capability(get_gpu_compute_capability(0))
-        return 0
-
-    @classmethod
-    def new(cls):
-        instance = cls()
-        return instance
-
-    def Mouse(self):
-        self.set_mice_model(get_mice_model(get_mouse_model_index(self.model)))
-        self.set_mice_display_name(get_mice_display_name(get_mouse_model_index(self.model)))
-        self.set_mice_display_location(get_mice_display_location(get_mouse_model_index(self.model)))
-        return 0
+    def process_messages(self):
+        msg = ctypes.create_string_buffer(48)  # MSG structure size
+        while GetMessageA(ctypes.byref(msg), None, 0, 0):
+            TranslateMessage(ctypes.byref(msg))
+            DispatchMessageA(ctypes.byref(msg))
