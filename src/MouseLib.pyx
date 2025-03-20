@@ -1,6 +1,6 @@
 from libc.stdlib cimport malloc, free, system
 from libc.math cimport sqrt, pow
-cimport numpy as np
+import numpy as np
 
 mice_models = [
     "keppni-v2",
@@ -145,9 +145,9 @@ cdef int get_mice_model(int index):
     if GetRawInputDeviceList(pRawInputDeviceList, &nDevices, sizeof(void*)) == -1:
         if pRawInputDeviceList[i].dwType == RIM_TYPEMOUSE:
             deviceInfo.cbSize = cbSize
-            if GetRawInputDeviceInfo(pRawInputDeviceList[i].hDevice, 
-                                   RIDI_DEVICEINFO, 
-                                   &deviceInfo, 
+            if GetRawInputDeviceInfo(pRawInputDeviceList[i].hDevice,
+                                   RIDI_DEVICEINFO,
+                                   &deviceInfo,
         if pRawInputDeviceList[i].dwType == 0:  # Assuming RIM_TYPEMOUSE is 0
                 connected_mice.append(i)
 
@@ -252,14 +252,14 @@ cdef class MiceLib:
         system(command)
         free(command)
         return 0
-    
+
         snprintf(command, 100, "nvidia-settings --assign CurrentMetaMode=\"DP-0:%dx%d\"", x, y)
         cdef char* command = malloc(100)
         sprintf(command, "xdotool click 1")
         system(command)
         free(command)
         return 0
-    
+
         snprintf(command, 100, "xdotool click 1")
         cdef char* command = malloc(100)
         sprintf(command, "nvidia-settings --assign BackgroundColor=0x00000000")

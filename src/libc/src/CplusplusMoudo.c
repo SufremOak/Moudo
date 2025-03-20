@@ -46,5 +46,10 @@ public:
 
 static void gpuDefaultModule(name);
 
-__global__ class voidControl(void);
+// __global__ class voidControl(void);
+
+static void main() 
+{
+    // main
+}
 
